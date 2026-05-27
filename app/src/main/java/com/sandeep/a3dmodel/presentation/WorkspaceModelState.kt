@@ -1,20 +1,12 @@
-package com.sandeep.a3dmodel.workspace
+package com.sandeep.a3dmodel.presentation
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-
-data class ModelLibraryEntry(
-    val id: String,
-    val label: String,
-    val assetPath: String
-)
-
-enum class WorkspaceMode {
-    MoveAndResize,
-    Interact
-}
+import com.sandeep.a3dmodel.data.ModelLibraryEntry
+import com.sandeep.a3dmodel.domain.WorkspaceMode
+import com.sandeep.a3dmodel.domain.WorkspaceRules
 
 class WorkspaceModelState(
     val itemId: Long,
@@ -47,51 +39,49 @@ class WorkspaceModelState(
     }
 
     fun resizeByDelta(deltaWidth: Float, deltaHeight: Float) {
-        width = (width + deltaWidth).coerceIn(MIN_CONTAINER_SIZE_PX, MAX_CONTAINER_SIZE_PX)
-        height = (height + deltaHeight).coerceIn(MIN_CONTAINER_SIZE_PX, MAX_CONTAINER_SIZE_PX)
+        width = (width + deltaWidth).coerceIn(
+            WorkspaceRules.MIN_CONTAINER_SIZE_PX,
+            WorkspaceRules.MAX_CONTAINER_SIZE_PX
+        )
+        height = (height + deltaHeight).coerceIn(
+            WorkspaceRules.MIN_CONTAINER_SIZE_PX,
+            WorkspaceRules.MAX_CONTAINER_SIZE_PX
+        )
     }
 
     fun rotateAndZoomBy(panX: Float, panY: Float, zoom: Float) {
-        rotationY += panX * ROTATION_SENSITIVITY
-        rotationX = (rotationX - panY * ROTATION_SENSITIVITY).coerceIn(-85f, 85f)
-        contentScale = (contentScale * zoom).coerceIn(MIN_CONTENT_SCALE, MAX_CONTENT_SCALE)
+        rotationY += panX * WorkspaceRules.ROTATION_SENSITIVITY
+        rotationX = (rotationX - panY * WorkspaceRules.ROTATION_SENSITIVITY).coerceIn(-85f, 85f)
+        contentScale = (contentScale * zoom).coerceIn(
+            WorkspaceRules.MIN_CONTENT_SCALE,
+            WorkspaceRules.MAX_CONTENT_SCALE
+        )
     }
 
     fun applyInteractionGesture(panX: Float, panY: Float, zoom: Float) {
         if (mode != WorkspaceMode.Interact) return
         rotateAndZoomBy(panX, panY, zoom)
     }
-
-    companion object {
-        const val ROTATION_SENSITIVITY = 0.35f
-        const val MIN_CONTAINER_SIZE_PX = 180f
-        const val MAX_CONTAINER_SIZE_PX = 980f
-        const val MIN_CONTENT_SCALE = 0.35f
-        const val MAX_CONTENT_SCALE = 3.5f
-    }
 }
-
-fun defaultModelLibrary(): List<ModelLibraryEntry> = listOf(
-    ModelLibraryEntry("cube", "Cube", "models/cube_blue.glb"),
-    ModelLibraryEntry("pyramid", "Pyramid", "models/pyramid_amber.glb"),
-    ModelLibraryEntry("tetra", "Tetra", "models/tetra_mint.glb"),
-    ModelLibraryEntry("octa", "Octa", "models/octa_sky.glb"),
-    ModelLibraryEntry("prism", "Prism", "models/prism_coral.glb")
-)
 
 fun createWorkspaceItem(
     itemId: Long,
     asset: ModelLibraryEntry,
-    index: Int
+    index: Int,
+    viewportWidth: Float,
+    viewportHeight: Float
 ): WorkspaceModelState {
-    val baseX = 28f + (index % 3) * 54f
-    val baseY = 148f + (index / 3) * 56f
+    val (x, y) = WorkspaceRules.initialCardPosition(
+        index = index,
+        viewportWidth = viewportWidth,
+        viewportHeight = viewportHeight
+    )
     return WorkspaceModelState(
         itemId = itemId,
         asset = asset,
-        initialX = baseX,
-        initialY = baseY,
-        initialWidth = 550f,
-        initialHeight = 550f
+        initialX = x,
+        initialY = y,
+        initialWidth = WorkspaceRules.INITIAL_CONTAINER_SIZE_PX,
+        initialHeight = WorkspaceRules.INITIAL_CONTAINER_SIZE_PX
     )
 }

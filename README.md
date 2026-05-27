@@ -1,80 +1,59 @@
 # 3D Model Viewer
 
-Single-activity Android app for loading, placing, resizing, and interacting with multiple `.glb` models on one screen.
+Single-activity Android app for loading multiple `.glb` models onto one canvas, moving them, resizing their containers, and switching each model into an interaction mode.
 
-## What It Uses
+## Architecture
 
-- Kotlin
-- Minimum SDK 24
-- Jetpack Compose for the shell UI
-- SceneView 2.3.1 on top of Filament for 3D rendering
+The code is split into three simple layers:
+- **Data**: bundled model library and asset metadata
+- **Domain**: workspace rules, mode constants, placement math, and size limits
+- **Presentation**: the workspace presenter/state holder and the Compose screen
 
-## Why SceneView / Filament
+That split keeps the UI thin, keeps workspace rules testable, and makes the 3D rendering setup easier to reason about.
 
-- Filament is a GPU-focused renderer built for real-time performance on Android.
-- SceneView gives a Compose-friendly wrapper around Filament and glTF loading without adding a large engine/runtime layer.
-- The app keeps one shared Filament engine for the screen and reuses loaders instead of recreating them per model.
+## 3D Library
 
-## App Behavior
+The app uses **SceneView 2.3.1**, which runs on top of **Filament**.
 
-- One activity only.
-- Add models from the top bar menu.
-- Each model stays on screen as its own draggable, resizable container.
-- Every container has:
-  - `Interact` toggle
-  - `Close` button
-- Normal mode:
-  - one-finger drag moves the container
-  - pinch resizes the container
-- Interaction mode:
-  - one-finger drag rotates the model
-  - pinch scales the 3D content
-- The two modes are isolated by design.
+Why this stack:
+- Filament is a high-performance rendering engine built for real-time Android graphics.
+- SceneView gives a Compose-friendly API for loading glTF/GLB assets without building a large custom rendering layer.
+- The app keeps one shared engine and shared loaders at screen scope, which reduces setup work and avoids recreating rendering infrastructure per model.
 
-## Bundled Assets
+## Performance Choices
 
-The app ships with 5 small procedural `.glb` assets under `app/src/main/assets/models/`.
+- **Shared engine/loaders**: one Filament engine, one model loader, one material loader, one environment loader.
+- **Small bundled assets**: five tiny offline `.glb` files are shipped with the app, so there is no network fetch or large asset download.
+- **Unlit transparent models**: the sample models use simple materials instead of expensive lighting and texture work.
+- **Single-screen UI**: no fragments, no navigation, and no extra screens.
+- **Per-card interaction**: each model card handles its own gestures so only the affected item updates.
+- **Explicit resize handle**: container resizing is done with a visible handle instead of pinch, which avoids conflict with the 3D view.
 
-They are intentionally:
+## Trade-offs
 
-- low-poly
-- unlit
-- texture-free
-- tiny on disk
+- The sample models are intentionally simple, so they are readable and cheap to render, but they are not visually rich.
+- The app favors stable performance over advanced graphics features like shadows, PBR materials, or heavy post-processing.
+- SceneView makes integration much faster, but it adds an abstraction layer instead of using raw Filament directly.
+- The UI is optimized for clarity and gesture separation, not for a highly polished editor-style experience.
 
-That keeps startup fast and avoids lighting/texturing cost on weak devices.
+## What I Would Improve With More Time
 
-## Performance Decisions
+- Add stronger profiling and device-specific tuning for very low-end phones.
+- Reuse more per-model scene resources to reduce churn when many items are added and removed.
+- Add a clearer resize affordance or optional resize overlay for smaller screens.
+- Improve asset variety with more sample models and better visual differentiation.
+- Add instrumentation/UI tests for drag, resize, interact, and close flows.
 
-- Shared engine and shared loaders:
-  - avoids repeated Filament setup
-  - reduces memory churn
-- Small offline models:
-  - no network fetches
-  - no large geometry or texture uploads
-- Unlit materials:
-  - avoids expensive lighting work
-  - keeps the models visible without HDR environment setup
-- No extra screens, fragments, or navigation:
-  - less lifecycle overhead
-- Per-card gesture logic:
-  - only the touched model updates
-  - avoids global scene recomposition for every movement
-- Container-resize uses viewport scaling:
-  - the 3D content naturally scales with the card size
+## Known Bugs / Limitations
+
+- Gesture behavior can still feel device-dependent because the app embeds a 3D surface inside a Compose card.
+- The resize handle is hidden in `Interact` mode, so resizing is only available in normal mode.
+- The bundled models are deliberately simple and translucent, so they are easier to run but less realistic.
+- I verified debug builds and unit tests locally, but I did not run a full performance profile on target low-end hardware in this workspace.
 
 ## Verification
 
-Build:
-
 ```bash
 ./gradlew.bat :app:assembleDebug
-```
-
-Unit tests:
-
-```bash
 ./gradlew.bat testDebugUnitTest
 ```
-
-I verified the debug build locally. I did not run a physical low-end device profiling session in this workspace, so if you need measured numbers, run Android Studio Profiler or `adb shell dumpsys gfxinfo` on the target hardware.

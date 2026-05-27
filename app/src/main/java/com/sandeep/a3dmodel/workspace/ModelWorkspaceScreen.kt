@@ -28,8 +28,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -49,36 +47,28 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import com.google.android.filament.Engine
-import com.google.android.filament.Renderer
-import com.google.android.filament.Scene
-import com.google.android.filament.View
 import dev.romainguy.kotlin.math.Float3
 import io.github.sceneview.SceneView
-import io.github.sceneview.loaders.EnvironmentLoader
-import io.github.sceneview.loaders.MaterialLoader
-import io.github.sceneview.loaders.ModelLoader
 import io.github.sceneview.math.Position
 import io.github.sceneview.node.ModelNode
 import io.github.sceneview.rememberCameraNode
-import io.github.sceneview.rememberEngine
-import io.github.sceneview.rememberEnvironmentLoader
-import io.github.sceneview.rememberMaterialLoader
-import io.github.sceneview.rememberModelLoader
 import io.github.sceneview.rememberRenderer
 import io.github.sceneview.rememberScene
 import io.github.sceneview.rememberView
+import com.sandeep.a3dmodel.data.ModelLibraryEntry
+import com.sandeep.a3dmodel.domain.WorkspaceMode
+import com.sandeep.a3dmodel.presentation.ModelRenderResources
+import com.sandeep.a3dmodel.presentation.ModelWorkspacePresenter
+import com.sandeep.a3dmodel.presentation.WorkspaceModelState
+import com.sandeep.a3dmodel.presentation.rememberModelRenderResources
 
 @Composable
 fun ModelWorkspaceScreen() {
     val context = LocalContext.current
-    val library = remember { defaultModelLibrary() }
-    val engine = rememberEngine()
-    val modelLoader = rememberModelLoader(engine, context)
-    val materialLoader = rememberMaterialLoader(engine, context)
-    val environmentLoader = rememberEnvironmentLoader(engine, context)
-    val items = remember { mutableStateListOf<WorkspaceModelState>() }
-    var nextId by remember { mutableLongStateOf(1L) }
+    val presenter = remember { ModelWorkspacePresenter() }
+    val renderResources = rememberModelRenderResources(context)
+    val library = presenter.library
+    val items = presenter.items
     var addMenuExpanded by remember { mutableStateOf(false) }
 
     BoxWithConstraints(
@@ -101,7 +91,7 @@ fun ModelWorkspaceScreen() {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp)
+                .padding(6.dp)
         ) {
             Surface(
                 color = Color(0xAA0F1825),
@@ -145,18 +135,11 @@ fun ModelWorkspaceScreen() {
                                     text = { Text(entry.label) },
                                     onClick = {
                                         addMenuExpanded = false
-                                        val card = createWorkspaceItem(
-                                            itemId = nextId++,
+                                        presenter.addModel(
                                             asset = entry,
-                                            index = items.size
+                                            viewportWidth = viewportWidth,
+                                            viewportHeight = viewportHeight
                                         )
-                                        val maxX = (viewportWidth - card.width).coerceAtLeast(0f)
-                                        val maxY = (viewportHeight - card.height).coerceAtLeast(0f)
-                                        card.x = (viewportWidth * 0.08f + items.size * 26f)
-                                            .coerceIn(0f, maxX)
-                                        card.y = (viewportHeight * 0.12f + items.size * 22f)
-                                            .coerceIn(0f, maxY)
-                                        items.add(card)
                                     }
                                 )
                             }
@@ -181,11 +164,8 @@ fun ModelWorkspaceScreen() {
                 items.forEach { item ->
                     ModelWorkspaceCard(
                         state = item,
-                        engine = engine,
-                        modelLoader = modelLoader,
-                        materialLoader = materialLoader,
-                        environmentLoader = environmentLoader,
-                        onClose = { items.remove(item) }
+                        renderResources = renderResources,
+                        onClose = { presenter.closeModel(item) }
                     )
                 }
             }
@@ -196,10 +176,7 @@ fun ModelWorkspaceScreen() {
 @Composable
 private fun ModelWorkspaceCard(
     state: WorkspaceModelState,
-    engine: Engine,
-    modelLoader: ModelLoader,
-    materialLoader: MaterialLoader,
-    environmentLoader: EnvironmentLoader,
+    renderResources: ModelRenderResources,
     onClose: () -> Unit
 ) {
     val density = LocalDensity.current
@@ -212,14 +189,14 @@ private fun ModelWorkspaceCard(
     } else {
         Color(0xFF121B29).copy(alpha = 0.96f)
     }
-    val cameraNode = rememberCameraNode(engine) {
+    val cameraNode = rememberCameraNode(renderResources.engine) {
         position = Position(z = 3.0f)
     }
-    val scene = rememberScene(engine)
-    val view = rememberView(engine)
-    val renderer = rememberRenderer(engine)
+    val scene = rememberScene(renderResources.engine)
+    val view = rememberView(renderResources.engine)
+    val renderer = rememberRenderer(renderResources.engine)
     val modelInstance = remember(state.asset.assetPath) {
-        runCatching { modelLoader.createModelInstance(state.asset.assetPath) }.getOrNull()
+        runCatching { renderResources.modelLoader.createModelInstance(state.asset.assetPath) }.getOrNull()
     }
     val modelNode = remember(modelInstance) {
         modelInstance?.let {
@@ -304,10 +281,10 @@ private fun ModelWorkspaceCard(
                                 null,
                                 0,
                                 0,
-                                engine,
-                                modelLoader,
-                                materialLoader,
-                                environmentLoader,
+                                renderResources.engine,
+                                renderResources.modelLoader,
+                                renderResources.materialLoader,
+                                renderResources.environmentLoader,
                                 scene,
                                 view,
                                 renderer,
