@@ -63,18 +63,3 @@ That keeps startup fast and avoids lighting/texturing cost on weak devices.
 - Container-resize uses viewport scaling:
   - the 3D content naturally scales with the card size
 
-## Verification
-
-Build:
-
-```bash
-./gradlew.bat :app:assembleDebug
-```
-
-Unit tests:
-
-```bash
-./gradlew.bat testDebugUnitTest
-```
-
-I verified the debug build locally. I did not run a physical low-end device profiling session in this workspace, so if you need measured numbers, run Android Studio Profiler or `adb shell dumpsys gfxinfo` on the target hardware.
