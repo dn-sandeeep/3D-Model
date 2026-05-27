@@ -356,44 +356,34 @@ private fun ModelWorkspaceCard(
                             )
                     )
 
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(end = 8.dp, bottom = 8.dp)
-                            .size(28.dp)
-                            .clip(MaterialTheme.shapes.small)
-                            .background(
-                                if (state.mode == WorkspaceMode.MoveAndResize) {
-                                    accent.copy(alpha = 0.95f)
-                                } else {
-                                    Color.White.copy(alpha = 0.28f)
-                                }
-                            )
-                            .border(
-                                width = 1.dp,
-                                color = Color.White.copy(alpha = 0.5f),
-                                shape = MaterialTheme.shapes.small
-                            )
-                            .then(
-                                if (state.mode == WorkspaceMode.MoveAndResize) {
-                                    Modifier.pointerInput(state.mode) {
-                                        detectDragGestures { change, dragAmount ->
-                                            val delta = (dragAmount.x + dragAmount.y) / 2f
-                                            state.resizeByDelta(delta, delta)
-                                        }
+                    if (state.mode == WorkspaceMode.MoveAndResize) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(end = 8.dp, bottom = 8.dp)
+                                .size(28.dp)
+                                .clip(MaterialTheme.shapes.small)
+                                .background(accent.copy(alpha = 0.95f))
+                                .border(
+                                    width = 1.dp,
+                                    color = Color.White.copy(alpha = 0.5f),
+                                    shape = MaterialTheme.shapes.small
+                                )
+                                .pointerInput(state.mode) {
+                                    detectDragGestures { _, dragAmount ->
+                                        val delta = (dragAmount.x + dragAmount.y) / 2f
+                                        state.resizeByDelta(delta, delta)
                                     }
-                                } else {
-                                    Modifier
-                                }
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "↘",
-                            fontSize = 12.sp,
-                            color = Color.White.copy(alpha = 0.95f),
-                            fontWeight = FontWeight.Bold
-                        )
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "↘",
+                                fontSize = 12.sp,
+                                color = Color.White.copy(alpha = 0.95f),
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
 
