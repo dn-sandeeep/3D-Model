@@ -14,6 +14,13 @@ class ModelWorkspacePresenter(
     private var nextId = 1L
 
     fun addModel(asset: ModelLibraryEntry, viewportWidth: Float, viewportHeight: Float) {
+        val existingIndex = items.indexOfFirst { it.asset.id == asset.id }
+        if (existingIndex >= 0) {
+            val existingItem = items.removeAt(existingIndex)
+            items.add(existingItem)
+            return
+        }
+
         val card = createWorkspaceItem(
             itemId = nextId++,
             asset = asset,

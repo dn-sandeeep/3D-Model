@@ -19,6 +19,7 @@ Single-activity Android app for loading, placing, resizing, and interacting with
 
 - One activity only.
 - Add models from the top bar menu.
+- Selecting the same model again brings its existing card to the front instead of creating a duplicate.
 - Each model stays on screen as its own draggable, resizable container.
 - Every container has:
   - `Interact` toggle
