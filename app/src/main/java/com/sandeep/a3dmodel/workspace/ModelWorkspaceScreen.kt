@@ -290,12 +290,18 @@ private fun ModelWorkspaceCard(
                             }
                         }
                         var liveSceneView by remember { mutableStateOf<SceneView?>(null) }
+                        var showPreviewOverlay by remember(state.itemId) {
+                            mutableStateOf(state.previewBitmap != null)
+                        }
 
                         LaunchedEffect(state.itemId, isActive) {
                             if (isActive) {
+                                showPreviewOverlay = state.previewBitmap != null
                                 delay(250)
                                 while (true) {
-                                    capturePreviewBitmap(liveSceneView, state)
+                                    capturePreviewBitmap(liveSceneView, state) {
+                                        showPreviewOverlay = false
+                                    }
                                     delay(1000)
                                 }
                             }
@@ -329,6 +335,16 @@ private fun ModelWorkspaceCard(
                                 }
                             }
                         )
+
+                        if (showPreviewOverlay) {
+                            state.previewBitmap?.let { preview ->
+                                Image(
+                                    bitmap = preview.asImageBitmap(),
+                                    contentDescription = state.asset.label,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                        }
 
                         if (modelNode != null) {
                             LaunchedEffect(state.rotationX, state.rotationY, state.contentScale) {
@@ -487,7 +503,11 @@ private fun Int.floorMod(modulus: Int): Int {
     return if (result < 0) result + modulus else result
 }
 
-private fun capturePreviewBitmap(sceneView: SceneView?, state: WorkspaceModelState) {
+private fun capturePreviewBitmap(
+    sceneView: SceneView?,
+    state: WorkspaceModelState,
+    onSuccess: () -> Unit = {}
+) {
     if (sceneView == null || sceneView.width <= 0 || sceneView.height <= 0) return
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
     if (!sceneView.isAttachedToWindow) return
@@ -501,6 +521,7 @@ private fun capturePreviewBitmap(sceneView: SceneView?, state: WorkspaceModelSta
             { copyResult ->
                 if (copyResult == PixelCopy.SUCCESS) {
                     state.previewBitmap = bitmap
+                    onSuccess()
                 }
             },
             Handler(Looper.getMainLooper())
