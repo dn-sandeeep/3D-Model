@@ -1,5 +1,6 @@
 package com.sandeep.a3dmodel.presentation
 
+import android.graphics.Bitmap
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -20,6 +21,8 @@ class WorkspaceModelState(
     var y by mutableFloatStateOf(initialY)
     var width by mutableFloatStateOf(initialWidth)
     var height by mutableFloatStateOf(initialHeight)
+    var zIndex by mutableFloatStateOf(0f)
+    var previewBitmap by mutableStateOf<Bitmap?>(null)
     var mode by mutableStateOf(WorkspaceMode.MoveAndResize)
     var rotationX by mutableFloatStateOf(0f)
     var rotationY by mutableFloatStateOf(0f)
@@ -68,6 +71,7 @@ fun createWorkspaceItem(
     itemId: Long,
     asset: ModelLibraryEntry,
     index: Int,
+    zIndex: Float,
     viewportWidth: Float,
     viewportHeight: Float
 ): WorkspaceModelState {
@@ -83,5 +87,7 @@ fun createWorkspaceItem(
         initialY = y,
         initialWidth = WorkspaceRules.INITIAL_CONTAINER_SIZE_PX,
         initialHeight = WorkspaceRules.INITIAL_CONTAINER_SIZE_PX
-    )
+    ).apply {
+        this.zIndex = zIndex
+    }
 }

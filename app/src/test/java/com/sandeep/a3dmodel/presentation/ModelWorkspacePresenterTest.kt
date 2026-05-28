@@ -2,6 +2,7 @@ package com.sandeep.a3dmodel.presentation
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import com.sandeep.a3dmodel.data.BundledModelLibraryRepository
 
@@ -20,8 +21,10 @@ class ModelWorkspacePresenterTest {
         presenter.addModel(first, viewportWidth = 1000f, viewportHeight = 800f)
 
         assertEquals(2, presenter.items.size)
-        assertEquals(second.id, presenter.items[0].asset.id)
-        assertEquals(first.id, presenter.items[1].asset.id)
+        assertEquals(first.id, presenter.items[0].asset.id)
+        assertEquals(second.id, presenter.items[1].asset.id)
+        assertTrue(presenter.items[0].zIndex > presenter.items[1].zIndex)
+        assertEquals(presenter.items[0].itemId, presenter.activeItemId)
     }
 
     @Test
@@ -38,5 +41,6 @@ class ModelWorkspacePresenterTest {
         assertEquals(1, presenter.items.size)
         assertEquals(asset.id, presenter.items.single().asset.id)
         assertSame(asset, presenter.items.single().asset)
+        assertEquals(presenter.items.single().itemId, presenter.activeItemId)
     }
 }

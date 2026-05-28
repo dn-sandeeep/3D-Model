@@ -1,7 +1,13 @@
 package com.sandeep.a3dmodel.workspace
 
+import android.graphics.Bitmap
+import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.view.PixelCopy
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -31,6 +37,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,6 +45,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -47,6 +55,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import kotlinx.coroutines.delay
 import dev.romainguy.kotlin.math.Float3
 import io.github.sceneview.SceneView
 import io.github.sceneview.math.Position
@@ -69,6 +78,7 @@ fun ModelWorkspaceScreen() {
     val renderResources = rememberModelRenderResources(context)
     val library = presenter.library
     val items = presenter.items
+    val activeItemId = presenter.activeItemId
     var addMenuExpanded by remember { mutableStateOf(false) }
 
     BoxWithConstraints(
@@ -161,12 +171,15 @@ fun ModelWorkspaceScreen() {
                     )
                     .background(Color(0xFF070D14))
             ) {
-                items.forEach { item ->
-                    ModelWorkspaceCard(
-                        state = item,
-                        renderResources = renderResources,
-                        onClose = { presenter.closeModel(item) }
-                    )
+                items.sortedBy { it.zIndex }.forEach { item ->
+                    key(item.itemId) {
+                        ModelWorkspaceCard(
+                            state = item,
+                            isActive = item.itemId == activeItemId,
+                            renderResources = renderResources,
+                            onClose = { presenter.closeModel(item) }
+                        )
+                    }
                 }
             }
         }
@@ -176,6 +189,7 @@ fun ModelWorkspaceScreen() {
 @Composable
 private fun ModelWorkspaceCard(
     state: WorkspaceModelState,
+    isActive: Boolean,
     renderResources: ModelRenderResources,
     onClose: () -> Unit
 ) {
@@ -189,26 +203,6 @@ private fun ModelWorkspaceCard(
     } else {
         Color(0xFF121B29).copy(alpha = 0.96f)
     }
-    val cameraNode = rememberCameraNode(renderResources.engine) {
-        position = Position(z = 3.0f)
-    }
-    val scene = rememberScene(renderResources.engine)
-    val view = rememberView(renderResources.engine)
-    val renderer = rememberRenderer(renderResources.engine)
-    val modelInstance = remember(state.asset.assetPath) {
-        runCatching { renderResources.modelLoader.createModelInstance(state.asset.assetPath) }.getOrNull()
-    }
-    val modelNode = remember(modelInstance) {
-        modelInstance?.let {
-            ModelNode(
-                modelInstance = it,
-                autoAnimate = false,
-                scaleToUnits = 1.0f,
-                centerOrigin = Float3(0f, 0f, 0f)
-            )
-        }
-    }
-
     Box(
         modifier = Modifier
             .offset { IntOffset(state.x.toInt(), state.y.toInt()) }
@@ -273,42 +267,107 @@ private fun ModelWorkspaceCard(
                             )
                         )
                 ) {
-                    AndroidView(
-                        modifier = Modifier.fillMaxSize(),
-                        factory = { context ->
-                            SceneView(
-                                context,
-                                null,
-                                0,
-                                0,
-                                renderResources.engine,
-                                renderResources.modelLoader,
-                                renderResources.materialLoader,
-                                renderResources.environmentLoader,
-                                scene,
-                                view,
-                                renderer,
-                                cameraNode
-                            )
-                        },
-                        update = { sceneView ->
-                            sceneView.cameraManipulator = null
-                            sceneView.onTouchEvent = { _, _ -> false }
-                            sceneView.clearChildNodes()
-                            if (modelNode != null) {
-                                sceneView.addChildNode(modelNode)
+                    if (isActive) {
+                        val cameraNode = rememberCameraNode(renderResources.engine) {
+                            position = Position(z = 3.0f)
+                        }
+                        val scene = rememberScene(renderResources.engine)
+                        val view = rememberView(renderResources.engine)
+                        val renderer = rememberRenderer(renderResources.engine)
+                        val modelInstance = remember(state.asset.assetPath) {
+                            runCatching {
+                                renderResources.modelLoader.createModelInstance(state.asset.assetPath)
+                            }.getOrNull()
+                        }
+                        val modelNode = remember(modelInstance) {
+                            modelInstance?.let {
+                                ModelNode(
+                                    modelInstance = it,
+                                    autoAnimate = false,
+                                    scaleToUnits = 1.0f,
+                                    centerOrigin = Float3(0f, 0f, 0f)
+                                )
                             }
                         }
-                    )
+                        var liveSceneView by remember { mutableStateOf<SceneView?>(null) }
 
-                    if (modelNode != null) {
-                        LaunchedEffect(state.rotationX, state.rotationY, state.contentScale) {
-                            modelNode.rotation = Float3(state.rotationX, state.rotationY, 0f)
-                            modelNode.scale = Float3(
-                                state.contentScale,
-                                state.contentScale,
-                                state.contentScale
+                        LaunchedEffect(state.itemId, isActive) {
+                            if (isActive) {
+                                delay(250)
+                                while (true) {
+                                    capturePreviewBitmap(liveSceneView, state)
+                                    delay(1000)
+                                }
+                            }
+                        }
+
+                        AndroidView(
+                            modifier = Modifier.fillMaxSize(),
+                            factory = { context ->
+                                SceneView(
+                                    context,
+                                    null,
+                                    0,
+                                    0,
+                                    renderResources.engine,
+                                    renderResources.modelLoader,
+                                    renderResources.materialLoader,
+                                    renderResources.environmentLoader,
+                                    scene,
+                                    view,
+                                    renderer,
+                                    cameraNode
+                                )
+                            },
+                            update = { sceneView ->
+                                liveSceneView = sceneView
+                                sceneView.cameraManipulator = null
+                                sceneView.onTouchEvent = { _, _ -> false }
+                                sceneView.clearChildNodes()
+                                if (modelNode != null) {
+                                    sceneView.addChildNode(modelNode)
+                                }
+                            }
+                        )
+
+                        if (modelNode != null) {
+                            LaunchedEffect(state.rotationX, state.rotationY, state.contentScale) {
+                                modelNode.rotation = Float3(state.rotationX, state.rotationY, 0f)
+                                modelNode.scale = Float3(
+                                    state.contentScale,
+                                    state.contentScale,
+                                    state.contentScale
+                                )
+                            }
+                        }
+                    } else {
+                        val preview = state.previewBitmap
+                        if (preview != null) {
+                            Image(
+                                bitmap = preview.asImageBitmap(),
+                                contentDescription = state.asset.label,
+                                modifier = Modifier.fillMaxSize()
                             )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        Brush.radialGradient(
+                                            colors = listOf(
+                                                accentGlow,
+                                                Color(0xFF05080C)
+                                            )
+                                        )
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = state.asset.label,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = Color.White.copy(alpha = 0.82f)
+                                )
+                            }
                         }
                     }
 
@@ -426,4 +485,25 @@ private fun accentForItem(itemId: Long): Color {
 private fun Int.floorMod(modulus: Int): Int {
     val result = this % modulus
     return if (result < 0) result + modulus else result
+}
+
+private fun capturePreviewBitmap(sceneView: SceneView?, state: WorkspaceModelState) {
+    if (sceneView == null || sceneView.width <= 0 || sceneView.height <= 0) return
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+    if (!sceneView.isAttachedToWindow) return
+    if (!sceneView.holder.surface.isValid) return
+
+    val bitmap = Bitmap.createBitmap(sceneView.width, sceneView.height, Bitmap.Config.ARGB_8888)
+    runCatching {
+        PixelCopy.request(
+            sceneView,
+            bitmap,
+            { copyResult ->
+                if (copyResult == PixelCopy.SUCCESS) {
+                    state.previewBitmap = bitmap
+                }
+            },
+            Handler(Looper.getMainLooper())
+        )
+    }
 }
