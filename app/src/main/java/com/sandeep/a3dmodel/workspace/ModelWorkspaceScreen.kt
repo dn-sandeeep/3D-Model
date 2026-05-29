@@ -10,6 +10,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -179,6 +180,7 @@ fun ModelWorkspaceScreen() {
                             state = item,
                             isActive = item.itemId == activeItemId,
                             renderResources = renderResources,
+                            onActivate = { presenter.activateItem(item) },
                             onClose = { presenter.closeModel(item) }
                         )
                     }
@@ -193,6 +195,7 @@ private fun ModelWorkspaceCard(
     state: WorkspaceModelState,
     isActive: Boolean,
     renderResources: ModelRenderResources,
+    onActivate: () -> Unit,
     onClose: () -> Unit
 ) {
     val density = LocalDensity.current
@@ -209,6 +212,9 @@ private fun ModelWorkspaceCard(
         modifier = Modifier
             .offset { IntOffset(state.x.toInt(), state.y.toInt()) }
             .size(widthDp, heightDp)
+            .pointerInput(state.itemId) {
+                detectTapGestures(onTap = { onActivate() })
+            }
             .graphicsLayer { shadowElevation = 6f }
     ) {
         Surface(

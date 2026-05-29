@@ -21,9 +21,7 @@ class ModelWorkspacePresenter(
     fun addModel(asset: ModelLibraryEntry, viewportWidth: Float, viewportHeight: Float) {
         val existingIndex = items.indexOfFirst { it.asset.id == asset.id }
         if (existingIndex >= 0) {
-            val item = items[existingIndex]
-            item.zIndex = nextZIndex++
-            activeItemId = item.itemId
+            activateItem(items[existingIndex])
             return
         }
 
@@ -37,6 +35,11 @@ class ModelWorkspacePresenter(
         )
         items.add(card)
         activeItemId = card.itemId
+    }
+
+    fun activateItem(item: WorkspaceModelState) {
+        item.zIndex = nextZIndex++
+        activeItemId = item.itemId
     }
 
     fun closeModel(item: WorkspaceModelState) {

@@ -28,6 +28,24 @@ class ModelWorkspacePresenterTest {
     }
 
     @Test
+    fun activatingExistingItemBringsItToFrontWithoutDuplicating() {
+        val presenter = ModelWorkspacePresenter(BundledModelLibraryRepository())
+        val first = library[0]
+        val second = library[1]
+
+        presenter.addModel(first, viewportWidth = 1000f, viewportHeight = 800f)
+        presenter.addModel(second, viewportWidth = 1000f, viewportHeight = 800f)
+
+        presenter.activateItem(presenter.items[0])
+
+        assertEquals(2, presenter.items.size)
+        assertEquals(first.id, presenter.items[0].asset.id)
+        assertEquals(second.id, presenter.items[1].asset.id)
+        assertTrue(presenter.items[0].zIndex > presenter.items[1].zIndex)
+        assertEquals(presenter.items[0].itemId, presenter.activeItemId)
+    }
+
+    @Test
     fun closingModelAllowsItToBeAddedAgainAsANewItem() {
         val presenter = ModelWorkspacePresenter(BundledModelLibraryRepository())
         val asset = library[0]
