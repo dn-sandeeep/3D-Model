@@ -2,7 +2,7 @@
 
 Single-activity Android app for loading, placing, resizing, and interacting with multiple `.glb` models on one screen.
 
-## What It Uses
+## Tech Stack
 
 - Kotlin
 - Minimum SDK 24
@@ -14,6 +14,12 @@ Single-activity Android app for loading, placing, resizing, and interacting with
 - Filament is a GPU-focused renderer built for real-time performance on Android.
 - SceneView gives a Compose-friendly wrapper around Filament and glTF loading without adding a large engine/runtime layer.
 - The app keeps one shared Filament engine for the screen and reuses loaders instead of recreating them per model.
+
+## Development Tools
+
+- Codex for implementation help, refactoring, and code review support.
+- Gradle for building and testing the Android project.
+- Android Studio for editing, running, and debugging the app.
 
 ## App Behavior
 
